@@ -3,12 +3,15 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+
+	"github.com/go-chi/chi"
+	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	fmt.Println("Welcome to RSS Aggr Service")
 
 	godotenv.Load()
 
@@ -16,6 +19,35 @@ func main() {
 	if portString == "" {
 		log.Fatal("Port is not declared in the environment")
 	}
+
+	router := chi.NewRouter()
+
+	// Optional MiddleWare Introduced via Use Function
+	router.Use(cors.Handler(cors.Options{
+		AllowedOrigins: []string{"https://*", "http://*"},
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"*"},
+		ExposedHeaders: []string{"Link"},
+		AllowCredentials: false,
+		MaxAge: 300,
+	}))
+
+	v1Router := chi.NewRouter()
+	v1Router.Get("/healthz", handlerReadiness)
+	v1Router.Get("/err", handlerErr)
+
+	router.Mount("/v1", v1Router)
+	srv := &http.Server{
+		Handler:router,
+		Addr : 	":" + portString,
+	}
+
+	log.Printf("Server Starting on PORT %v", portString)
+	err := srv.ListenAndServe()
+	if err != nil {
+		log.Fatal("OOPS, Can't Listen", err)
+	}
+
 
 	fmt.Println("Port:" + portString)
 }
