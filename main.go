@@ -1,15 +1,23 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 
+	"github.com/ManavSharma142/RSS_Aggregator/internal/database"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/cors"
 	"github.com/joho/godotenv"
+
+	_ "github.com/lib/pq"
 )
+
+type apiConfig struct {
+	DB *database.Queries
+}
 
 func main() {
 
@@ -20,9 +28,23 @@ func main() {
 		log.Fatal("Port is not declared in the environment")
 	}
 
+	dbURL := os.Getenv("DB_URL")
+	if dbURL == "" {
+		log.Fatal("DB_URL is not declared in the environment")
+	}
+
+	conn, err := sql.Open("postgres", dbURL)
+	if err != nil { 
+		log.Fatal("Can't connect to database:", err)
+	}
+
+	apiCfg := apiConfig{
+		DB: database.New(conn),
+	}
+
 	router := chi.NewRouter()
 
-	// Optional MiddleWare Introduced via Use Function
+	// (Optional) MiddleWare Introduced via Use Function
 	router.Use(cors.Handler(cors.Options{
 		AllowedOrigins: []string{"https://*", "http://*"},
 		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
@@ -35,17 +57,18 @@ func main() {
 	v1Router := chi.NewRouter()
 	v1Router.Get("/healthz", handlerReadiness)
 	v1Router.Get("/err", handlerErr)
+	v1Router.Post("/users", apiCfg.handlerCreateUser)
 
-	router.Mount("/v1", v1Router)
-	srv := &http.Server{
+	router.Mount("/v1", v1Router) // nesting routers
+	srv := &http.Server{ // configuration of server object 
 		Handler:router,
 		Addr : 	":" + portString,
 	}
 
 	log.Printf("Server Starting on PORT %v", portString)
-	err := srv.ListenAndServe()
-	if err != nil {
-		log.Fatal("OOPS, Can't Listen", err)
+	errr := srv.ListenAndServe() // server started
+	if errr != nil { // following code gets blocked until server closes
+		log.Fatal("OOPS, Can't Listen", errr)
 	}
 
 
