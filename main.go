@@ -59,8 +59,15 @@ func main() {
 	v1Router.Get("/err", handlerErr)
 	v1Router.Post("/users", apiCfg.handlerCreateUser)
 	v1Router.Get("/users", apiCfg.middlewareAuth(apiCfg.handlerGetUser))
+
 	v1Router.Post("/feeds", apiCfg.middlewareAuth(apiCfg.handlerCreateFeed))
 	v1Router.Get("/feeds", apiCfg.handlerGetFeeds)
+
+	v1Router.Post("/feed_follow", apiCfg.middlewareAuth(apiCfg.handlerCreateFeedFollow))
+	v1Router.Get("/feed_follow", apiCfg.middlewareAuth(apiCfg.handlerGetFeedFollow))
+	v1Router.Delete("/feed_follow/{feedFollowID}", apiCfg.middlewareAuth(apiCfg.handlerDeleteFeedFollow))
+
+	fmt.Println("Port:" + portString)
 
 	router.Mount("/v1", v1Router) // nesting routers
 	srv := &http.Server{ // configuration of server object 
@@ -69,11 +76,10 @@ func main() {
 	}
 
 	log.Printf("Server Starting on PORT %v", portString)
-	errr := srv.ListenAndServe() // server started
-	if errr != nil { // following code gets blocked until server closes
-		log.Fatal("OOPS, Can't Listen", errr)
+	err = srv.ListenAndServe() // server started
+	if err != nil { // following code gets blocked until server closes
+		log.Fatal("OOPS, Can't Listen", err)
 	}
-
 
 	fmt.Println("Port:" + portString)
 }
