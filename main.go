@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/ManavSharma142/RSS_Aggregator/internal/database"
 	"github.com/go-chi/chi"
@@ -36,11 +37,14 @@ func main() {
 	conn, err := sql.Open("postgres", dbURL)
 	if err != nil { 
 		log.Fatal("Can't connect to database:", err)
+	}	
+
+	db := database.New(conn)
+	apiCfg := apiConfig{
+		DB: db,
 	}
 
-	apiCfg := apiConfig{
-		DB: database.New(conn),
-	}
+	go startScraping(db, 10, time.Minute)
 
 	router := chi.NewRouter()
 
